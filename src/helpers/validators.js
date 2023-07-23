@@ -19,52 +19,38 @@ import {
   complement,
   count,
   equals,
+  juxt,
+  length,
   lte,
-  map,
   max,
-  nth,
   partial,
   pipe,
   prop,
   reduce,
-  repeat,
-  toPairs,
-  useWith,
+  uniq,
+  values,
 } from "ramda";
 
-const doubleParam = (fn) => (param) => fn(param, param);
-const multyParam =
-  (fn, n = fn.length) =>
-  (param) =>
-    fn(...repeat(param, n));
+const isRed = partial(equals, ["red"]);
+const isOrange = partial(equals, ["orange"]);
+const isGreen = partial(equals, ["green"]);
+const isBlue = partial(equals, ["blue"]);
+const isWhite = partial(equals, ["white"]);
 
-const toArray = pipe(toPairs, map(nth(1))); // [КРУГ, КВАДРАТ, ТРЕУГОЛЬНИК, ЗВЕЗДА]
-
-const matchColor = equals;
-const isRed = partial(matchColor, ["red"]);
-const isOrange = partial(matchColor, ["orange"]);
-const isGreen = partial(matchColor, ["green"]);
-const isBlue = partial(matchColor, ["blue"]);
-const isWhite = partial(matchColor, ["white"]);
 const isNotRed = complement(isRed);
-const isNotOrange = complement(isOrange);
-const isNotGreen = complement(isGreen);
-const isNotBlue = complement(isBlue);
 const isNotWhite = complement(isWhite);
-const countRed = pipe(toArray, count(isRed));
-const countOrange = pipe(toArray, count(isOrange));
-const countGreen = pipe(toArray, count(isGreen));
-const countBlue = pipe(toArray, count(isBlue));
-const countWhite = pipe(toArray, count(isWhite));
 
-// const getCircle = nth(0);
-// const getSquare = nth(1);
-// const getTriangle = nth(2);
-// const getStar = nth(3);
+const countRed = pipe(values, count(isRed));
+const countOrange = pipe(values, count(isOrange));
+const countGreen = pipe(values, count(isGreen));
+const countBlue = pipe(values, count(isBlue));
+
 const getCircle = prop("circle");
 const getSquare = prop("square");
 const getTriangle = prop("triangle");
 const getStar = prop("star");
+
+const allSame = pipe(uniq, length, equals(1));
 
 // 1. Красная звезда, зеленый квадрат, все остальные белые.
 export const validateFieldN1 = allPass([
@@ -78,8 +64,10 @@ export const validateFieldN1 = allPass([
 export const validateFieldN2 = pipe(countGreen, lte(2));
 
 // 3. Количество красных фигур равно кол-ву синих.
-export const validateFieldN3 = doubleParam(
-  useWith(equals, [countRed, countBlue]) // eslint-disable-line
+export const validateFieldN3 = pipe(
+  values,
+  juxt([countRed, countBlue]),
+  allSame
 );
 
 // 4. Синий круг, красная звезда, оранжевый квадрат треугольник любого цвета
@@ -91,15 +79,9 @@ export const validateFieldN4 = allPass([
 
 // 5. Три фигуры одного любого цвета кроме белого (четыре фигуры одного цвета – это тоже true).
 export const validateFieldN5 = pipe(
-  multyParam(
-    // eslint-disable-next-line
-    useWith(pipe(Array, reduce(max, 0)), [
-      countRed,
-      countOrange,
-      countGreen,
-      countBlue,
-    ])
-  ),
+  values,
+  juxt([countRed, countOrange, countGreen, countBlue]),
+  reduce(max, 0),
   lte(3)
 );
 
@@ -124,6 +106,6 @@ export const validateFieldN9 = pipe(countGreen, equals(4));
 
 // 10. Треугольник и квадрат одного цвета (не белого), остальные – любого цвета
 export const validateFieldN10 = both(
-  doubleParam(useWith(equals, [getTriangle, getSquare])), // eslint-disable-line
+  pipe(juxt([getTriangle, getSquare]), allSame),
   pipe(getTriangle, isNotWhite)
 );
